@@ -157,15 +157,14 @@ def cp_path_to_dir(cp_path, tag):
     if cp_path.is_dir():
         return cp_path
     path_sans_extension = cp_path.parent / cp_path.stem
-    cp_dir = Path(f'{path_sans_extension}-{tag}-cp')
-    return cp_dir
+    return Path(f'{path_sans_extension}-{tag}-cp')
 
 # constants
 
 WEBDATASET_IMAGE_TEXT_COLUMNS = tuple(args.wds.split(','))
-ENABLE_WEBDATASET = True if len(WEBDATASET_IMAGE_TEXT_COLUMNS) == 2 else False
+ENABLE_WEBDATASET = len(WEBDATASET_IMAGE_TEXT_COLUMNS) == 2
 
-DALLE_OUTPUT_FILE_NAME = args.dalle_output_file_name + ".pt"
+DALLE_OUTPUT_FILE_NAME = f"{args.dalle_output_file_name}.pt"
 
 VAE_PATH = args.vae_path
 VQGAN_MODEL_PATH = args.vqgan_model_path
@@ -209,19 +208,31 @@ else:
     # quit early if no tar files were found
     if Path(args.image_text_folder).is_dir():
         DATASET = [str(p) for p in Path(args.image_text_folder).glob("**/*") if ".tar" in str(p).lower()] # .name
-        assert len(DATASET) > 0, 'The directory ({}) does not contain any WebDataset/.tar files.'.format(args.image_text_folder)
-        print('Found {} WebDataset .tar(.gz) file(s) under given path {}!'.format(len(DATASET), args.image_text_folder))
+        assert (
+            DATASET
+        ), f'The directory ({args.image_text_folder}) does not contain any WebDataset/.tar files.'
+
+        print(
+            f'Found {len(DATASET)} WebDataset .tar(.gz) file(s) under given path {args.image_text_folder}!'
+        )
+
     elif ('http://' in args.image_text_folder.lower()) | ('https://' in args.image_text_folder.lower()):
         DATASET = f"pipe:curl -L -s {args.image_text_folder} || true"
-        print('Found {} http(s) link under given path!'.format(len(DATASET), args.image_text_folder))
+        print(f'Found {len(DATASET)} http(s) link under given path!')
     elif 'gs://' in args.image_text_folder.lower():
         DATASET = f"pipe:gsutil cat {args.image_text_folder} || true"
-        print('Found {} GCS link under given path!'.format(len(DATASET), args.image_text_folder))
+        print(f'Found {len(DATASET)} GCS link under given path!')
     elif '.tar' in args.image_text_folder:
         DATASET = args.image_text_folder
-        print('Found WebDataset .tar(.gz) file under given path {}!'.format(args.image_text_folder))
+        print(
+            f'Found WebDataset .tar(.gz) file under given path {args.image_text_folder}!'
+        )
+
     else:
-        raise Exception('No folder, no .tar(.gz) and no url pointing to tar files provided under {}.'.format(args.image_text_folder))
+        raise Exception(
+            f'No folder, no .tar(.gz) and no url pointing to tar files provided under {args.image_text_folder}.'
+        )
+
 
 # initialize distributed backend
 
@@ -328,15 +339,15 @@ if isinstance(vae, OpenAIDiscreteVAE) and args.fp16:
 def group_weight(model):
     group_decay, group_no_decay = [], []
     for params in model.named_parameters():
-        if 'transformer' in params[0]:
-            if 'bias' in params[0] or 'norm' in params[0]:
-                group_no_decay.append(params[1])
-                continue
+        if 'transformer' in params[0] and (
+            'bias' in params[0] or 'norm' in params[0]
+        ):
+            group_no_decay.append(params[1])
+            continue
         group_decay.append(params[1])
 
     assert len(list(model.parameters())) == len(group_decay) + len(group_no_decay)
-    groups = [dict(params=group_decay), dict(params=group_no_decay, weight_decay=.0)]
-    return groups
+    return [dict(params=group_decay), dict(params=group_no_decay, weight_decay=.0)]
 
 
 # create dataset and dataloader

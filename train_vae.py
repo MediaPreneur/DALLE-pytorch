@@ -187,9 +187,10 @@ deepspeed_config = {'train_batch_size': BATCH_SIZE}
     optimizer=opt,
     model_parameters=vae.parameters(),
     training_data=ds if using_deepspeed else dl,
-    lr_scheduler=sched if not using_deepspeed else None,
+    lr_scheduler=None if using_deepspeed else sched,
     config_params=deepspeed_config,
 )
+
 
 using_deepspeed_sched = False
 # Prefer scheduler in `deepspeed_config`.
@@ -207,10 +208,10 @@ def save_model(path):
     if using_deepspeed:
         cp_path = Path(path)
         path_sans_extension = cp_path.parent / cp_path.stem
-        cp_dir = str(path_sans_extension) + '-ds-cp'
+        cp_dir = f'{str(path_sans_extension)}-ds-cp'
 
         distr_vae.save_checkpoint(cp_dir, client_state=save_obj)
-        # We do not return so we do get a "normal" checkpoint to refer to.
+            # We do not return so we do get a "normal" checkpoint to refer to.
 
     if not distr_backend.is_root_worker():
         return
@@ -271,7 +272,7 @@ for epoch in range(EPOCHS):
                 }
 
                 wandb.save('./vae.pt')
-            save_model(f'./vae.pt')
+            save_model('./vae.pt')
 
             # temperature anneal
 

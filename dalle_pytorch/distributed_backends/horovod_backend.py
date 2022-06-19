@@ -53,6 +53,4 @@ class HorovodBackend(DistributedBackend):
         return (model, optimizer, training_data, lr_scheduler)
 
     def _average_all(self, tensor):
-        # Reduce op is average by default
-        averaged = self.backend_module.allreduce(tensor)
-        return averaged
+        return self.backend_module.allreduce(tensor)

@@ -76,7 +76,7 @@ class LayerScale(nn.Module):
         super().__init__()
         if depth <= 18:
             init_eps = 0.1
-        elif depth > 18 and depth <= 24:
+        elif depth <= 24:
             init_eps = 1e-5
         else:
             init_eps = 1e-6

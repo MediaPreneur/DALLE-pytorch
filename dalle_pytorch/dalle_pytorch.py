@@ -134,7 +134,7 @@ class DiscreteVAE(nn.Module):
 
         enc_chans = [channels, *enc_chans]
 
-        dec_init_chan = codebook_dim if not has_resblocks else dec_chans[0]
+        dec_init_chan = dec_chans[0] if has_resblocks else codebook_dim
         dec_chans = [dec_init_chan, *dec_chans]
 
         enc_chans_io, dec_chans_io = map(lambda t: list(zip(t[:-1], t[1:])), (enc_chans, dec_chans))
@@ -193,8 +193,7 @@ class DiscreteVAE(nn.Module):
     @eval_decorator
     def get_codebook_indices(self, images):
         logits = self(images, return_logits = True)
-        codebook_indices = logits.argmax(dim = 1).flatten(1)
-        return codebook_indices
+        return logits.argmax(dim = 1).flatten(1)
 
     def decode(
         self,
@@ -205,8 +204,7 @@ class DiscreteVAE(nn.Module):
         h = w = int(sqrt(n))
 
         image_embeds = rearrange(image_embeds, 'b (h w) d -> b d h w', h = h, w = w)
-        images = self.decoder(image_embeds)
-        return images
+        return self.decoder(image_embeds)
 
     def forward(
         self,
@@ -329,8 +327,7 @@ class CLIP(nn.Module):
 
         sim = einsum('i d, j d -> i j', text_latents, image_latents) * temp
         labels = torch.arange(b, device = device)
-        loss = (F.cross_entropy(sim, labels) + F.cross_entropy(sim.t(), labels)) / 2
-        return loss
+        return (F.cross_entropy(sim, labels) + F.cross_entropy(sim.t(), labels)) / 2
 
 # main DALL-E class
 
@@ -370,8 +367,18 @@ class DALLE(nn.Module):
 
         num_text_tokens = num_text_tokens + text_seq_len  # reserve unique padding tokens for each position (text seq len)
 
-        self.text_pos_emb = nn.Embedding(text_seq_len + 1, dim) if not rotary_emb else always(0) # +1 for <bos>
-        self.image_pos_emb = AxialPositionalEmbedding(dim, axial_shape = (image_fmap_size, image_fmap_size)) if not rotary_emb else always(0)
+        self.text_pos_emb = (
+            always(0) if rotary_emb else nn.Embedding(text_seq_len + 1, dim)
+        )
+
+        self.image_pos_emb = (
+            always(0)
+            if rotary_emb
+            else AxialPositionalEmbedding(
+                dim, axial_shape=(image_fmap_size, image_fmap_size)
+            )
+        )
+
 
         self.num_text_tokens = num_text_tokens # for offsetting logits index and calculating cross entropy loss
         self.num_image_tokens = num_image_tokens
@@ -652,5 +659,6 @@ class DALLE(nn.Module):
         loss_text = F.cross_entropy(logits[:, :, :self.text_seq_len], labels[:, :self.text_seq_len])
         loss_img = F.cross_entropy(logits[:, :, self.text_seq_len:], labels[:, self.text_seq_len:])
 
-        loss = (loss_text + self.loss_img_weight * loss_img) / (self.loss_img_weight + 1)
-        return loss
+        return (loss_text + self.loss_img_weight * loss_img) / (
+            self.loss_img_weight + 1
+        )
