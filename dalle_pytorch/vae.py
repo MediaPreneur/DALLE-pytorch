@@ -136,8 +136,7 @@ class OpenAIDiscreteVAE(nn.Module):
         z = F.one_hot(img_seq, num_classes = self.num_tokens)
         z = rearrange(z, 'b h w c -> b c h w').float()
         x_stats = self.dec(z).float()
-        x_rec = unmap_pixels(torch.sigmoid(x_stats[:, :3]))
-        return x_rec
+        return unmap_pixels(torch.sigmoid(x_stats[:, :3]))
 
     def forward(self, img):
         raise NotImplemented
@@ -153,7 +152,7 @@ def get_obj_from_str(string, reload=False):
     return getattr(importlib.import_module(module, package=None), cls)
 
 def instantiate_from_config(config):
-    if not "target" in config:
+    if "target" not in config:
         raise KeyError("Expected key `target` to instantiate.")
     return get_obj_from_str(config["target"])(**config.get("params", dict()))
 

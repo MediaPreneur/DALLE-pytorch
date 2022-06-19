@@ -39,10 +39,7 @@ class Deterministic(nn.Module):
         if not set_rng:
             return self.net(*args, **kwargs)
 
-        rng_devices = []
-        if self.cuda_in_fwd:
-            rng_devices = self.gpu_devices
-
+        rng_devices = self.gpu_devices if self.cuda_in_fwd else []
         with torch.random.fork_rng(devices=rng_devices, enabled=True):
             torch.set_rng_state(self.cpu_state)
             if self.cuda_in_fwd:

@@ -380,10 +380,7 @@ class SparseAttention(Attention):
         if exists(rotary_pos_emb):
             q, k, v = apply_pos_emb(rotary_pos_emb, (q, k, v))
 
-        key_pad_mask = None
-        if exists(mask):
-            key_pad_mask = ~mask
-
+        key_pad_mask = ~mask if exists(mask) else None
         attn_mask = None
         if self.causal:
             i, j = q.shape[-2], k.shape[-2]
